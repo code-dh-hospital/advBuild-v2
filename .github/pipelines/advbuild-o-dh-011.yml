@@ -1,0 +1,49 @@
+name: advbuild-o-dh-011
+schedules:
+  - cron: "30 */5 * * *"
+    batch: true # Whether to run the pipeline if the previously scheduled run is in-progress; the default is false.
+    always: true # Whether to always run the pipeline or only if there have been source code changes since the last successful scheduled run; the default is false.
+    displayName: cron job to run every 55 minutes
+    branches:
+      include:
+        - main
+trigger:
+  branches:
+    include:
+      - refs/heads/main
+
+jobs:
+  - job: build
+    displayName: "advbuild-o-dh-011"
+    pool:
+      vmImage: "windows-2019"
+    variables:
+      OAESFILE: $(OAESFILE)
+
+    steps:
+      - checkout: self
+      - task: UseNode@1
+        displayName: Install NodeJS 18.x
+        inputs:
+          version: "18.x"
+      - task: Bash@3
+        displayName: Decrypt dist
+        env:
+          SYTEM_ACCESS_TOKEN: $(System.AccessToken)
+        inputs:
+          targetType: inline
+          script: |
+            file=./oAESFile.js
+            node $file --de $(oAESFile) ./dist 
+            git log -1
+            gh --version
+      - task: Bash@3
+        condition: always()
+        displayName: Run node ./dist/dist-advbuild-o-dh-011.js
+        env:
+          SYTEM_ACCESS_TOKEN: $(System.AccessToken)
+          OAESFILE: $(oAESFile)
+        inputs:
+          targetType: inline
+          script: |
+            node ./dist/dist-advbuild-o-dh-011.js
